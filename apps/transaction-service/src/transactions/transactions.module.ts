@@ -1,10 +1,15 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import {
+  ClientsModule,
+  Transport,
+} from '@nestjs/microservices';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { NOTIFICATIONS_QUEUE } from '@app/common';
 import { Transaction } from './transaction.entity';
 import { TransactionsController } from './transactions.controller';
-import { TransactionsService } from './transactions.service';
+import { TransactionsService, EVENT_BUS } from './transactions.service';
 import { JwtStrategy } from '../auth/jwt.strategy';
 
 @Module({
@@ -12,6 +17,22 @@ import { JwtStrategy } from '../auth/jwt.strategy';
     TypeOrmModule.forFeature([Transaction]),
     PassportModule,
     ConfigModule,
+    ClientsModule.registerAsync([
+      {
+        name: EVENT_BUS,
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [
+              config.get<string>('RABBITMQ_URL', 'amqp://localhost:5672'),
+            ],
+            queue: NOTIFICATIONS_QUEUE,
+            queueOptions: { durable: true },
+          },
+        }),
+      },
+    ]),
   ],
   controllers: [TransactionsController],
   providers: [TransactionsService, JwtStrategy],

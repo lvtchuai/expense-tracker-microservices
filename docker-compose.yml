@@ -72,10 +72,42 @@ services:
       DB_NAME: transactions
       # MUST match auth-service so JWTs verify across the boundary.
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
     ports:
       - "${TRANSACTION_PORT:-3002}:3002"
     depends_on:
       transaction-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"      # AMQP
+      - "${RABBITMQ_UI_PORT:-15672}:15672" # management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: notification-service
+    environment:
+      PORT: 3003
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
+    ports:
+      - "${NOTIFICATION_PORT:-3003}:3003"
+    depends_on:
+      rabbitmq:
         condition: service_healthy
 
 volumes:

@@ -2,7 +2,7 @@
 
 A personal expense tracker built as microservices, designed as a Kubernetes-deployment portfolio project.
 
-## Architecture (Phase 1)
+## Architecture
 
 ```
         ┌──────────────┐        ┌─────────────────────┐
@@ -12,25 +12,39 @@ client  │ auth-service │        │ transaction-service │
         └──────┬───────┘        └──────────┬──────────┘
                │  issues JWT               │  verifies same JWT
                └──────── shared JWT_SECRET ┘  (stateless, no cross-call)
+                                            │
+                            emit "transaction.created"
+                                            │
+                                     ┌──────▼───────┐
+                                     │   RabbitMQ   │  :5672 (UI :15672)
+                                     └──────┬───────┘
+                                            │ consume
+                                  ┌─────────▼──────────┐
+                                  │ notification-service│ :3003
+                                  │  (sends notifs)     │
+                                  └─────────────────────┘
 ```
 
 **Design choices**
 - **Database per service** — `auth` and `transactions` are separate Postgres instances; no shared tables, no cross-DB FKs.
 - **Stateless auth** — auth-service signs a JWT; transaction-service verifies it with the same `JWT_SECRET`, so it authenticates requests without calling auth-service.
-- **NestJS monorepo** — `apps/*` are deployable services, `libs/common` holds shared code (health checks, JWT guard).
+- **Async events** — transaction-service emits `transaction.created` to RabbitMQ; notification-service consumes it. No direct service-to-service call — the producer doesn't know or wait for consumers. Emit is fire-and-forget: a broker outage logs a warning but never fails the write.
+- **Shared event contract** — the event name + payload type live in `libs/common/events`, so producer and consumer can't drift.
+- **NestJS monorepo** — `apps/*` are deployable services, `libs/common` holds shared code (health checks, JWT guard, event contracts).
 
 ## Tech stack
-NestJS 10 · TypeScript · TypeORM · PostgreSQL 16 · Passport-JWT · Docker Compose
+NestJS 10 · TypeScript · TypeORM · PostgreSQL 16 · RabbitMQ 3.13 · Passport-JWT · Docker Compose
 
 ## Layout
 ```
 apps/
   auth-service/         register, login, JWT, /auth/me
-  transaction-service/  CRUD transactions + summary, JWT-guarded
+  transaction-service/  CRUD transactions + summary, emits events
+  notification-service/ RabbitMQ consumer, sends notifications
 libs/
-  common/               health module, JWT guard, @CurrentUser decorator
+  common/               health module, JWT guard, @CurrentUser, event contracts
 Dockerfile              shared multi-stage build (--build-arg APP=…)
-docker-compose.yml      2 services + 2 Postgres, healthchecks
+docker-compose.yml      3 services + 2 Postgres + RabbitMQ, healthchecks
 ```
 
 ## Run locally
@@ -79,13 +93,20 @@ curl -s localhost:3002/api/transactions/summary -H "authorization: Bearer $TOKEN
 | transaction | GET | `/api/transactions/summary` | Bearer |
 | transaction | GET | `/api/transactions/:id` | Bearer |
 | transaction | DELETE | `/api/transactions/:id` | Bearer |
-| both | GET | `/health`, `/health/ready` | – |
+| all | GET | `/health`, `/health/ready` | – |
+
+Creating a transaction emits `transaction.created` → notification-service logs a notification.
+Watch it: `docker compose logs -f notification-service`.
+RabbitMQ management UI: http://localhost:15672 (guest/guest).
 
 ## Roadmap
 - **Phase 1 ✅** auth + transaction services, docker-compose
-- **Phase 2** RabbitMQ, import-worker (CSV), notification-service, report-service
-- **Phase 3** production Dockerfiles, health/readiness hardening
-- **Phase 4** Kubernetes: Deployments, Services, Ingress+TLS, HPA, KEDA, CronJob
+- **Phase 2** — in progress
+  - ✅ RabbitMQ + notification-service (event consumer)
+  - ⬜ import-worker (parse CSV bank statements → bulk transactions, async)
+  - ⬜ report-service (monthly/yearly rollups, CPU-heavy; calls transaction-service API)
+- **Phase 3** production Dockerfiles, migrations (drop `synchronize`), health hardening
+- **Phase 4** Kubernetes: Deployments, Services, Ingress+TLS, HPA, KEDA (queue-based), CronJob
 - **Phase 5** Prometheus/Grafana, GitHub Actions + GitOps
 
 > Note: `synchronize: true` is on for Phase 1 convenience. Switch to TypeORM migrations before Phase 3/K8s.

@@ -1,18 +1,29 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  TRANSACTION_CREATED,
+  TransactionCreatedEvent,
+} from '@app/common';
 import { Transaction } from './transaction.entity';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { QueryTransactionDto } from './dto/query-transaction.dto';
 
+/** DI token for the RabbitMQ client proxy. */
+export const EVENT_BUS = 'EVENT_BUS';
+
 @Injectable()
 export class TransactionsService {
+  private readonly logger = new Logger(TransactionsService.name);
+
   constructor(
     @InjectRepository(Transaction)
     private readonly repo: Repository<Transaction>,
+    @Inject(EVENT_BUS) private readonly events: ClientProxy,
   ) {}
 
-  create(userId: string, dto: CreateTransactionDto) {
+  async create(userId: string, dto: CreateTransactionDto) {
     const tx = this.repo.create({
       userId,
       type: dto.type,
@@ -21,7 +32,32 @@ export class TransactionsService {
       note: dto.note,
       occurredAt: new Date(dto.occurredAt),
     });
-    return this.repo.save(tx);
+    const saved = await this.repo.save(tx);
+
+    this.publishCreated(saved);
+    return saved;
+  }
+
+  /**
+   * Fire-and-forget event emit. A broker outage must not fail the write —
+   * we log and move on. (Phase 2 accepts at-most-once here; an outbox pattern
+   * would be the production-grade upgrade.)
+   */
+  private publishCreated(tx: Transaction) {
+    const payload: TransactionCreatedEvent = {
+      transactionId: tx.id,
+      userId: tx.userId,
+      type: tx.type,
+      amount: tx.amount,
+      category: tx.category,
+      occurredAt: tx.occurredAt.toISOString(),
+    };
+    this.events.emit(TRANSACTION_CREATED, payload).subscribe({
+      error: (err) =>
+        this.logger.warn(
+          `failed to publish ${TRANSACTION_CREATED} for ${tx.id}: ${err?.message ?? err}`,
+        ),
+    });
   }
 
   async findAll(userId: string, query: QueryTransactionDto) {
