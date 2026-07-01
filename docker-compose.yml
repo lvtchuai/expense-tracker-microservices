@@ -72,6 +72,7 @@ services:
       DB_NAME: transactions
       # MUST match auth-service so JWTs verify across the boundary.
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key-change-me}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
     ports:
       - "${TRANSACTION_PORT:-3002}:3002"
@@ -106,6 +107,24 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
     ports:
       - "${NOTIFICATION_PORT:-3003}:3003"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  import-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: import-worker
+    environment:
+      PORT: 3004
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
+      # Calls transaction-service's internal API to create each transaction.
+      TRANSACTION_SERVICE_URL: http://transaction-service:3002
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key-change-me}
+    ports:
+      - "${IMPORT_WORKER_PORT:-3004}:3004"
     depends_on:
       rabbitmq:
         condition: service_healthy

@@ -3,6 +3,8 @@ import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
+  IMPORT_ROW,
+  ImportRowEvent,
   TRANSACTION_CREATED,
   TransactionCreatedEvent,
 } from '@app/common';
@@ -10,8 +12,9 @@ import { Transaction } from './transaction.entity';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { QueryTransactionDto } from './dto/query-transaction.dto';
 
-/** DI token for the RabbitMQ client proxy. */
+/** DI tokens for the RabbitMQ client proxies. */
 export const EVENT_BUS = 'EVENT_BUS';
+export const IMPORT_BUS = 'IMPORT_BUS';
 
 @Injectable()
 export class TransactionsService {
@@ -21,7 +24,47 @@ export class TransactionsService {
     @InjectRepository(Transaction)
     private readonly repo: Repository<Transaction>,
     @Inject(EVENT_BUS) private readonly events: ClientProxy,
+    @Inject(IMPORT_BUS) private readonly importBus: ClientProxy,
   ) {}
+
+  /**
+   * Parse CSV and enqueue one message per data row. Returns immediately;
+   * import-worker does the real work. Header row (starts with "type") is
+   * skipped. Blank lines are ignored.
+   */
+  enqueueImport(userId: string, csv: string) {
+    const lines = csv
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+
+    let enqueued = 0;
+    let rowNumber = 0;
+    for (const line of lines) {
+      rowNumber++;
+      // Skip an optional header row.
+      if (rowNumber === 1 && /^type\s*,/i.test(line)) continue;
+
+      const [type, amount, category, occurredAt, note] = line
+        .split(',')
+        .map((c) => c?.trim());
+
+      const event: ImportRowEvent = {
+        userId,
+        rowNumber,
+        type,
+        amount,
+        category,
+        occurredAt,
+        note: note || undefined,
+      };
+      this.importBus.emit(IMPORT_ROW, event);
+      enqueued++;
+    }
+
+    this.logger.log(`enqueued ${enqueued} import row(s) for user ${userId}`);
+    return { enqueued };
+  }
 
   async create(userId: string, dto: CreateTransactionDto) {
     const tx = this.repo.create({

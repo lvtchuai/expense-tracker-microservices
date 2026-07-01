@@ -17,3 +17,24 @@ export interface TransactionCreatedEvent {
 
 /** Name of the queue notification-service consumes from. */
 export const NOTIFICATIONS_QUEUE = 'notifications_queue';
+
+// --- CSV import flow ---
+
+/** Queue import-worker consumes from (one message per CSV row). */
+export const IMPORT_QUEUE = 'import_queue';
+
+/** Emitted once per CSV row by transaction-service's import endpoint. */
+export const IMPORT_ROW = 'transaction.import.row';
+
+export interface ImportRowEvent {
+  /** Owner the imported transaction belongs to. */
+  userId: string;
+  /** 1-based row number in the uploaded file, for error reporting. */
+  rowNumber: number;
+  /** Raw parsed columns; worker validates before creating. */
+  type?: string;
+  amount?: string;
+  category?: string;
+  note?: string;
+  occurredAt?: string;
+}

@@ -6,10 +6,14 @@ import {
 } from '@nestjs/microservices';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { NOTIFICATIONS_QUEUE } from '@app/common';
+import { IMPORT_QUEUE, NOTIFICATIONS_QUEUE } from '@app/common';
 import { Transaction } from './transaction.entity';
 import { TransactionsController } from './transactions.controller';
-import { TransactionsService, EVENT_BUS } from './transactions.service';
+import {
+  TransactionsService,
+  EVENT_BUS,
+  IMPORT_BUS,
+} from './transactions.service';
 import { JwtStrategy } from '../auth/jwt.strategy';
 
 @Module({
@@ -28,6 +32,20 @@ import { JwtStrategy } from '../auth/jwt.strategy';
               config.get<string>('RABBITMQ_URL', 'amqp://localhost:5672'),
             ],
             queue: NOTIFICATIONS_QUEUE,
+            queueOptions: { durable: true },
+          },
+        }),
+      },
+      {
+        name: IMPORT_BUS,
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [
+              config.get<string>('RABBITMQ_URL', 'amqp://localhost:5672'),
+            ],
+            queue: IMPORT_QUEUE,
             queueOptions: { durable: true },
           },
         }),

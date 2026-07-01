@@ -1,9 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import { text } from 'express';
 import { TransactionServiceModule } from './transaction-service.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(TransactionServiceModule);
+
+  // Accept raw CSV bodies on the import endpoint as a plain string.
+  app.use(text({ type: 'text/csv', limit: '5mb' }));
 
   app.setGlobalPrefix('api', { exclude: ['health', 'health/ready'] });
   app.useGlobalPipes(

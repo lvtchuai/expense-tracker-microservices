@@ -8,13 +8,16 @@
     "build:auth": "nest build auth-service",
     "build:transaction": "nest build transaction-service",
     "build:notification": "nest build notification-service",
+    "build:import": "nest build import-worker",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start:auth": "nest start auth-service",
     "start:transaction": "nest start transaction-service",
     "start:notification": "nest start notification-service",
+    "start:import": "nest start import-worker",
     "start:auth:dev": "nest start auth-service --watch",
     "start:transaction:dev": "nest start transaction-service --watch",
     "start:notification:dev": "nest start notification-service --watch",
+    "start:import:dev": "nest start import-worker --watch",
     "lint": "eslint \"{apps,libs}/**/*.ts\" --fix"
   },
   "dependencies": {

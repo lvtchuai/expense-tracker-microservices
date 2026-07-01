@@ -36,6 +36,15 @@
         "tsConfigPath": "apps/notification-service/tsconfig.app.json"
       }
     },
+    "import-worker": {
+      "type": "application",
+      "root": "apps/import-worker",
+      "entryFile": "main",
+      "sourceRoot": "apps/import-worker/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/import-worker/tsconfig.app.json"
+      }
+    },
     "common": {
       "type": "library",
       "root": "libs/common",
