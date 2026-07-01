@@ -114,6 +114,9 @@ export class TransactionsService {
     if (query.type) qb.andWhere('t.type = :type', { type: query.type });
     if (query.category)
       qb.andWhere('t.category = :category', { category: query.category });
+    if (query.from)
+      qb.andWhere('t.occurred_at >= :from', { from: query.from });
+    if (query.to) qb.andWhere('t.occurred_at < :to', { to: query.to });
 
     const [items, total] = await qb.getManyAndCount();
     return { items, total, limit: query.limit, offset: query.offset };

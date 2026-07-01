@@ -129,6 +129,23 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  report-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: report-service
+    environment:
+      PORT: 3005
+      # Verifies the user's JWT, then reads transactions via the internal API.
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      TRANSACTION_SERVICE_URL: http://transaction-service:3002
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key-change-me}
+    ports:
+      - "${REPORT_PORT:-3005}:3005"
+    depends_on:
+      - transaction-service
+
 volumes:
   auth-db-data:
   transaction-db-data:

@@ -1,5 +1,13 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 /** Filtering + pagination for listing transactions. */
 export class QueryTransactionDto {
@@ -10,6 +18,16 @@ export class QueryTransactionDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  /** Inclusive lower bound on occurredAt (ISO). */
+  @IsOptional()
+  @IsDateString()
+  from?: string;
+
+  /** Exclusive upper bound on occurredAt (ISO). */
+  @IsOptional()
+  @IsDateString()
+  to?: string;
 
   @IsOptional()
   @Type(() => Number)
