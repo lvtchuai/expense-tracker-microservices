@@ -146,6 +146,22 @@ services:
     depends_on:
       - transaction-service
 
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        # Browser calls services directly, so these are host-visible URLs.
+        NEXT_PUBLIC_AUTH_URL: http://localhost:${AUTH_PORT:-3001}
+        NEXT_PUBLIC_TRANSACTION_URL: http://localhost:${TRANSACTION_PORT:-3002}
+        NEXT_PUBLIC_REPORT_URL: http://localhost:${REPORT_PORT:-3005}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      - auth-service
+      - transaction-service
+      - report-service
+
 volumes:
   auth-db-data:
   transaction-db-data:

@@ -42,11 +42,12 @@ client  │ auth-service │        │ transaction-service │
 - **NestJS monorepo** — `apps/*` are deployable services, `libs/common` holds shared code (health checks, JWT guard, event contracts).
 
 ## Tech stack
-NestJS 10 · TypeScript · TypeORM · PostgreSQL 16 · RabbitMQ 3.13 · Passport-JWT · Docker Compose
+NestJS 10 · Next.js 14 · TypeScript · TypeORM · PostgreSQL 16 · RabbitMQ 3.13 · Passport-JWT · Docker Compose
 
 ## Services & ports
 | Service | Port | Type | Scales on (Phase 4) |
 |---|---|---|---|
+| web (Next.js) | 3000 | frontend dashboard | replicas |
 | auth-service | 3001 | HTTP + Postgres | replicas |
 | transaction-service | 3002 | HTTP + Postgres, event producer | replicas |
 | notification-service | 3003 | RabbitMQ consumer | queue depth |
@@ -61,10 +62,11 @@ apps/
   notification-service/ RabbitMQ consumer, sends notifications
   import-worker/        RabbitMQ consumer, validates CSV rows → creates txns
   report-service/       CPU-heavy monthly rollups, calls transaction-service API
+web/                    Next.js dashboard (login, transactions, CSV import, report charts)
 libs/
   common/               health, JWT guard, internal-auth guard, @CurrentUser, event contracts
 Dockerfile              shared multi-stage build (--build-arg APP=…)
-docker-compose.yml      5 services + 2 Postgres + RabbitMQ, healthchecks
+docker-compose.yml      5 services + web + 2 Postgres + RabbitMQ, healthchecks
 ```
 
 ## Run locally
@@ -73,6 +75,8 @@ docker-compose.yml      5 services + 2 Postgres + RabbitMQ, healthchecks
 cp .env.example .env
 docker compose up --build
 ```
+
+Then open the web UI: **http://localhost:3000** — register, add/import transactions, and view monthly reports with charts. The frontend (Next.js) calls the services directly (CORS enabled on auth/transaction/report).
 
 Or without Docker (needs two local Postgres DBs `auth` and `transactions`):
 

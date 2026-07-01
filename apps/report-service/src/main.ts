@@ -5,6 +5,9 @@ import { ReportServiceModule } from './report-service.module';
 async function bootstrap() {
   const app = await NestFactory.create(ReportServiceModule);
 
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN?.split(',') ?? true,
+  });
   app.setGlobalPrefix('api', { exclude: ['health', 'health/ready'] });
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, transform: true }),

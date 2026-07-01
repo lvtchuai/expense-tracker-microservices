@@ -6,6 +6,10 @@ import { TransactionServiceModule } from './transaction-service.module';
 async function bootstrap() {
   const app = await NestFactory.create(TransactionServiceModule);
 
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN?.split(',') ?? true,
+  });
+
   // Accept raw CSV bodies on the import endpoint as a plain string.
   app.use(text({ type: 'text/csv', limit: '5mb' }));
 

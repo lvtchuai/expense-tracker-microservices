@@ -5,6 +5,9 @@ import { AuthServiceModule } from './auth-service.module';
 async function bootstrap() {
   const app = await NestFactory.create(AuthServiceModule);
 
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN?.split(',') ?? true,
+  });
   app.setGlobalPrefix('api', { exclude: ['health', 'health/ready'] });
   app.useGlobalPipes(
     new ValidationPipe({
