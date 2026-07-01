@@ -1,0 +1,83 @@
+# Phase 1 local stack: 2 services, database-per-service.
+# Usage:
+#   cp .env.example .env
+#   docker compose up --build
+
+services:
+  auth-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: auth
+    ports:
+      - "${AUTH_DB_PORT:-5432}:5432"
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d auth"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  transaction-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: transactions
+    ports:
+      - "${TRANSACTION_DB_PORT:-5433}:5432"
+    volumes:
+      - transaction-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d transactions"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: auth-service
+    environment:
+      PORT: 3001
+      DB_HOST: auth-db
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_NAME: auth
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+    ports:
+      - "${AUTH_PORT:-3001}:3001"
+    depends_on:
+      auth-db:
+        condition: service_healthy
+
+  transaction-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: transaction-service
+    environment:
+      PORT: 3002
+      DB_HOST: transaction-db
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_NAME: transactions
+      # MUST match auth-service so JWTs verify across the boundary.
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+    ports:
+      - "${TRANSACTION_PORT:-3002}:3002"
+    depends_on:
+      transaction-db:
+        condition: service_healthy
+
+volumes:
+  auth-db-data:
+  transaction-db-data:
