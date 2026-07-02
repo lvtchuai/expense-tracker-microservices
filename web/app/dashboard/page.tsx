@@ -154,7 +154,7 @@ export default function DashboardPage() {
                   <div className="input-suffix">
                     <input
                       type="number"
-                      step="1000"
+                      step="1"
                       min="1"
                       required
                       value={amount}
