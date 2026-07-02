@@ -3,42 +3,36 @@
 import { useCallback, useEffect, useState } from 'react';
 import { MonthlyReport, reportApi } from '@/lib/api';
 import { useRequireAuth } from '@/lib/useAuth';
+import { useToast } from '@/lib/toast';
+import { categoryColor, categoryIcon, money } from '@/lib/format';
 import { TopBar } from '../components/TopBar';
 import { CategoryBars, DailyBars } from '../components/Charts';
 
 const MONTHS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ];
-
-function money(n: string | number) {
-  return Number(n).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
 
 export default function ReportsPage() {
   const { user, ready } = useRequireAuth();
+  const toast = useToast();
   const now = new Date();
   const [year, setYear] = useState(now.getUTCFullYear());
   const [month, setMonth] = useState(now.getUTCMonth() + 1);
   const [report, setReport] = useState<MonthlyReport | null>(null);
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError('');
     try {
       setReport(await reportApi.monthly(year, month));
     } catch (e) {
-      setError((e as Error).message);
+      toast((e as Error).message, 'err');
       setReport(null);
     } finally {
       setLoading(false);
     }
-  }, [year, month]);
+  }, [year, month, toast]);
 
   useEffect(() => {
     if (ready) load();
@@ -47,11 +41,22 @@ export default function ReportsPage() {
   if (!ready) return null;
 
   const delta = report ? Number(report.comparedToPrevMonth.deltaExpense) : 0;
+  const pct = report?.comparedToPrevMonth.pctChange;
 
   return (
     <>
       <TopBar user={user} />
-      <div className="container grid" style={{ gap: 20 }}>
+      <div className="container grid fade-in" style={{ gap: 22 }}>
+        <div className="page-head">
+          <h1 className="title">📊 Monthly report</h1>
+          <p className="subtitle">
+            Computed by <strong>report-service</strong>, which pulls this
+            month&apos;s transactions from transaction-service and aggregates
+            them.
+          </p>
+        </div>
+
+        {/* Period picker */}
         <div className="card">
           <div className="row" style={{ alignItems: 'flex-end' }}>
             <div>
@@ -72,42 +77,46 @@ export default function ReportsPage() {
               <input
                 type="number"
                 value={year}
+                min={2000}
+                max={2100}
                 onChange={(e) => setYear(Number(e.target.value))}
               />
             </div>
-            <button onClick={load} disabled={loading}>
+            <button onClick={load} disabled={loading} style={{ flex: '0 0 auto' }}>
               {loading ? 'Loading…' : 'View report'}
             </button>
           </div>
-          <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>
-            Computed by <strong>report-service</strong>, which fetches this
-            month&apos;s transactions from transaction-service and aggregates
-            them.
-          </p>
         </div>
 
-        {error && <div className="error">{error}</div>}
-
-        {report && (
+        {loading && !report ? (
+          <div className="card">
+            <div className="skeleton" style={{ height: 200 }} />
+          </div>
+        ) : report ? (
           <>
             <div className="grid grid-3">
-              <div className="card stat">
-                <div className="label">Income</div>
+              <div className="card stat card-hover">
+                <div className="stat-head">
+                  <span className="icon icon-income">↗</span>Income
+                </div>
                 <div className="value pos">+{money(report.totals.income)}</div>
               </div>
-              <div className="card stat">
-                <div className="label">Expense</div>
+              <div className="card stat card-hover">
+                <div className="stat-head">
+                  <span className="icon icon-expense">↘</span>Expense
+                </div>
                 <div className="value neg">−{money(report.totals.expense)}</div>
               </div>
-              <div className="card stat">
-                <div className="label">vs last month</div>
+              <div className="card stat card-hover">
+                <div className="stat-head">
+                  <span className="icon icon-balance">Δ</span>vs last month
+                </div>
                 <div className={`value ${delta > 0 ? 'neg' : 'pos'}`}>
-                  {delta > 0 ? '+' : ''}
-                  {money(report.comparedToPrevMonth.deltaExpense)}
-                  {report.comparedToPrevMonth.pctChange !== null && (
-                    <span style={{ fontSize: 14 }} className="muted">
-                      {' '}
-                      ({report.comparedToPrevMonth.pctChange}%)
+                  {delta > 0 ? '+' : delta < 0 ? '−' : ''}
+                  {money(Math.abs(delta))}
+                  {pct !== null && pct !== undefined && (
+                    <span className="hint" style={{ marginLeft: 6 }}>
+                      {delta > 0 ? '▲' : '▼'} {Math.abs(Number(pct))}%
                     </span>
                   )}
                 </div>
@@ -120,18 +129,31 @@ export default function ReportsPage() {
                 <CategoryBars data={report.byCategory} />
               </div>
               <div className="card">
-                <h3 className="section-title">Top categories</h3>
+                <h3 className="section-title">🏆 Top categories</h3>
                 {report.topExpenseCategories.length === 0 ? (
-                  <div className="empty">No expenses this month.</div>
+                  <div className="empty">
+                    <span className="emoji">🎉</span>No spending this month.
+                  </div>
                 ) : (
                   <table>
                     <tbody>
                       {report.topExpenseCategories.map((c, i) => (
                         <tr key={c.category}>
-                          <td className="muted">#{i + 1}</td>
-                          <td>{c.category}</td>
-                          <td className="muted">{c.count}×</td>
-                          <td style={{ textAlign: 'right' }} className="neg">
+                          <td className="muted" style={{ width: 28 }}>
+                            #{i + 1}
+                          </td>
+                          <td>
+                            <span
+                              className="cat-dot"
+                              style={{ background: categoryColor(c.category) }}
+                            />
+                            {categoryIcon(c.category)} {c.category}
+                          </td>
+                          <td className="hint">{c.count}×</td>
+                          <td
+                            style={{ textAlign: 'right', fontWeight: 600 }}
+                            className="neg"
+                          >
                             {money(c.total)}
                           </td>
                         </tr>
@@ -144,19 +166,21 @@ export default function ReportsPage() {
 
             <div className="card">
               <h3 className="section-title">
-                Daily expense — {MONTHS[report.period.month - 1]}{' '}
+                📅 Daily expense — {MONTHS[report.period.month - 1]}{' '}
                 {report.period.year}
+                <span className="hint" style={{ fontWeight: 400 }}>
+                  · {report.transactionCount} transaction(s)
+                </span>
               </h3>
               <DailyBars data={report.dailyExpense} />
-              <p className="muted" style={{ fontSize: 13 }}>
-                {report.transactionCount} transaction(s) this month.
-              </p>
             </div>
           </>
-        )}
-
-        {!report && !loading && !error && (
-          <div className="empty">No data for this period.</div>
+        ) : (
+          <div className="card">
+            <div className="empty">
+              <span className="emoji">📊</span>No data for this period.
+            </div>
+          </div>
         )}
       </div>
     </>
