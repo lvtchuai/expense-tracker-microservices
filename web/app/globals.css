@@ -230,6 +230,21 @@ textarea:focus {
 .input-prefix > input {
   padding-left: 26px;
 }
+.input-suffix {
+  position: relative;
+}
+.input-suffix > span {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--faint);
+  font-size: 14px;
+  pointer-events: none;
+}
+.input-suffix > input {
+  padding-right: 28px;
+}
 
 /* ---------- Buttons ---------- */
 button,

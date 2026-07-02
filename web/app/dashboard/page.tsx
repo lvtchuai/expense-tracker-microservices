@@ -151,17 +151,17 @@ export default function DashboardPage() {
               <div className="row" style={{ marginBottom: 15 }}>
                 <div>
                   <label>Amount</label>
-                  <div className="input-prefix">
-                    <span>$</span>
+                  <div className="input-suffix">
                     <input
                       type="number"
-                      step="0.01"
-                      min="0.01"
+                      step="1000"
+                      min="1"
                       required
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      placeholder="0.00"
+                      placeholder="0"
                     />
+                    <span>₫</span>
                   </div>
                 </div>
                 <div>

@@ -1,11 +1,15 @@
 // Shared formatting + category color helpers.
 
+/**
+ * Format an amount as Vietnamese đồng: grouped by thousands, no decimals,
+ * with a trailing ₫ (e.g. "1.400.000 ₫"). Amounts are stored as numeric(12,2)
+ * in the DB but VND has no sub-unit, so we round for display.
+ * Pass sign=true to prefix +/− based on the value's sign.
+ */
 export function money(n: string | number, sign = false): string {
   const num = Number(n);
-  const s = Math.abs(num).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  const s =
+    Math.round(Math.abs(num)).toLocaleString('vi-VN') + ' ₫';
   if (!sign) return s;
   return (num < 0 ? '−' : '+') + s;
 }

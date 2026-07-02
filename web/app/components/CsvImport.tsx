@@ -5,9 +5,9 @@ import { txApi } from '@/lib/api';
 import { useToast } from '@/lib/toast';
 
 const SAMPLE = `type,amount,category,occurredAt,note
-expense,45.90,groceries,2026-07-01T10:00:00Z,weekly shop
-income,3000,salary,2026-07-01T09:00:00Z,july pay
-expense,12.50,coffee,2026-07-02T08:00:00Z,`;
+expense,350000,groceries,2026-07-01T10:00:00Z,đi chợ
+income,18000000,salary,2026-07-01T09:00:00Z,lương tháng 7
+expense,45000,coffee,2026-07-02T08:00:00Z,`;
 
 export function CsvImport({ onDone }: { onDone: () => void }) {
   const toast = useToast();
