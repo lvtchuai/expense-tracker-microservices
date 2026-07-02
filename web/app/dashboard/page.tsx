@@ -7,6 +7,7 @@ import { useToast } from '@/lib/toast';
 import { categoryColor, categoryIcon, money } from '@/lib/format';
 import { TopBar } from '../components/TopBar';
 import { CsvImport } from '../components/CsvImport';
+import { AmountInput } from '../components/AmountInput';
 
 const CATEGORIES = [
   'groceries', 'dining', 'transport', 'coffee', 'rent',
@@ -54,11 +55,16 @@ export default function DashboardPage() {
 
   async function addTransaction(e: React.FormEvent) {
     e.preventDefault();
+    const amt = Number(amount);
+    if (!amt || amt <= 0) {
+      toast('Please enter an amount greater than 0.', 'err');
+      return;
+    }
     setSaving(true);
     try {
       await txApi.create({
         type,
-        amount: Number(amount),
+        amount: amt,
         category,
         note: note || undefined,
         occurredAt: new Date(date + 'T12:00:00Z').toISOString(),
@@ -151,18 +157,7 @@ export default function DashboardPage() {
               <div className="row" style={{ marginBottom: 15 }}>
                 <div>
                   <label>Amount</label>
-                  <div className="input-suffix">
-                    <input
-                      type="number"
-                      step="1"
-                      min="1"
-                      required
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      placeholder="0"
-                    />
-                    <span>₫</span>
-                  </div>
+                  <AmountInput value={amount} onChange={setAmount} />
                 </div>
                 <div>
                   <label>Date</label>
