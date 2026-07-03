@@ -125,11 +125,33 @@ export const authApi = {
 };
 
 // --- transaction-service ---
+export interface TxFilters {
+  type?: 'income' | 'expense';
+  category?: string;
+  search?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
+}
+
 export const txApi = {
-  list: (limit = 50) =>
-    request<{ items: Transaction[]; total: number }>(
-      `${TRANSACTION_URL}/api/transactions?limit=${limit}`,
-    ),
+  list: (filters: TxFilters = {}) => {
+    const p = new URLSearchParams();
+    if (filters.type) p.set('type', filters.type);
+    if (filters.category) p.set('category', filters.category);
+    if (filters.search) p.set('search', filters.search);
+    if (filters.from) p.set('from', filters.from);
+    if (filters.to) p.set('to', filters.to);
+    p.set('limit', String(filters.limit ?? 20));
+    p.set('offset', String(filters.offset ?? 0));
+    return request<{
+      items: Transaction[];
+      total: number;
+      limit: number;
+      offset: number;
+    }>(`${TRANSACTION_URL}/api/transactions?${p.toString()}`);
+  },
   create: (input: {
     type: 'income' | 'expense';
     amount: number;

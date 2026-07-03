@@ -695,6 +695,36 @@ code {
   line-height: 1.9;
 }
 
+/* ---------- Filter bar + pager ---------- */
+.list-head {
+  margin-bottom: 14px;
+}
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.filter-bar > input {
+  flex: 2 1 220px;
+}
+.filter-bar > select {
+  flex: 1 1 130px;
+}
+.filter-bar .btn-ghost {
+  flex: 0 0 auto;
+}
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+.pager .btn-ghost {
+  padding: 7px 14px;
+}
+
 /* ---------- Modal ---------- */
 .modal-backdrop {
   position: fixed;

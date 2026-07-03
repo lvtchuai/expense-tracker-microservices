@@ -4,27 +4,20 @@ import { useCallback, useEffect, useState } from 'react';
 import { Summary, Transaction, txApi } from '@/lib/api';
 import { useRequireAuth } from '@/lib/useAuth';
 import { useToast } from '@/lib/toast';
-import { CATEGORIES, categoryColor, categoryIcon, money } from '@/lib/format';
+import { CATEGORIES, categoryIcon, money } from '@/lib/format';
 import { TopBar } from '../components/TopBar';
 import { CsvImport } from '../components/CsvImport';
 import { AmountInput } from '../components/AmountInput';
 import { EditModal } from '../components/EditModal';
-
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
+import { TransactionList } from '../components/TransactionList';
 
 export default function DashboardPage() {
   const { user, ready } = useRequireAuth();
   const toast = useToast();
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [items, setItems] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Transaction | null>(null);
+  // Bumped after any mutation → TransactionList reloads and summary refreshes.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // add-form state
   const [type, setType] = useState<'expense' | 'income'>('expense');
@@ -34,21 +27,21 @@ export default function DashboardPage() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
 
-  const refresh = useCallback(async () => {
+  // Reload summary; TransactionList reloads itself off refreshKey.
+  const loadSummary = useCallback(async () => {
     try {
-      const [s, list] = await Promise.all([txApi.summary(), txApi.list(50)]);
-      setSummary(s);
-      setItems(list.items);
+      setSummary(await txApi.summary());
     } catch (e) {
       toast((e as Error).message, 'err');
-    } finally {
-      setLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
-    if (ready) refresh();
-  }, [ready, refresh]);
+    if (ready) loadSummary();
+  }, [ready, loadSummary, refreshKey]);
+
+  // Called after any create/edit/delete/import.
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   async function addTransaction(e: React.FormEvent) {
     e.preventDefault();
@@ -69,21 +62,11 @@ export default function DashboardPage() {
       toast(`${type === 'expense' ? 'Expense' : 'Income'} added.`, 'ok');
       setAmount('');
       setNote('');
-      await refresh();
+      refresh();
     } catch (e) {
       toast((e as Error).message, 'err');
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function remove(id: string) {
-    try {
-      await txApi.remove(id);
-      toast('Transaction deleted.', 'info');
-      await refresh();
-    } catch (e) {
-      toast((e as Error).message, 'err');
     }
   }
 
@@ -210,83 +193,12 @@ export default function DashboardPage() {
         {/* CSV / Excel import — full width for the review table */}
         <CsvImport onDone={refresh} />
 
-        {/* Transactions table */}
-        <div className="card">
-          <h3 className="section-title">
-            🧾 Recent transactions
-            {!loading && items.length > 0 && (
-              <span className="hint" style={{ fontWeight: 400 }}>
-                · {items.length}
-              </span>
-            )}
-          </h3>
-
-          {loading ? (
-            <SkeletonRows />
-          ) : items.length === 0 ? (
-            <div className="empty">
-              <span className="emoji">🗒️</span>
-              No transactions yet.
-              <div className="hint" style={{ marginTop: 6 }}>
-                Add one above, or import a CSV to get started.
-              </div>
-            </div>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Category</th>
-                    <th>Note</th>
-                    <th style={{ textAlign: 'right' }}>Amount</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((t) => (
-                    <tr key={t.id}>
-                      <td className="muted">{fmtDate(t.occurredAt)}</td>
-                      <td>
-                        <span
-                          className="cat-dot"
-                          style={{ background: categoryColor(t.category) }}
-                        />
-                        {categoryIcon(t.category)} {t.category}
-                      </td>
-                      <td className="muted">{t.note || '—'}</td>
-                      <td
-                        style={{ textAlign: 'right', fontWeight: 600 }}
-                        className={t.type === 'income' ? 'pos' : 'neg'}
-                      >
-                        {t.type === 'income' ? '+' : '−'}
-                        {money(t.amount)}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div className="row-actions">
-                          <button
-                            className="btn-edit"
-                            onClick={() => setEditing(t)}
-                            title="Edit"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="btn-danger"
-                            onClick={() => remove(t.id)}
-                            title="Delete"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        {/* Transactions: filter bar + table + pagination */}
+        <TransactionList
+          refreshKey={refreshKey}
+          onEdit={setEditing}
+          onChanged={refresh}
+        />
       </div>
 
       {editing && (
@@ -324,16 +236,6 @@ function StatCard({
       ) : (
         <div className={`value ${valueClass ?? ''}`}>{value}</div>
       )}
-    </div>
-  );
-}
-
-function SkeletonRows() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="skeleton" style={{ height: 20 }} />
-      ))}
     </div>
   );
 }

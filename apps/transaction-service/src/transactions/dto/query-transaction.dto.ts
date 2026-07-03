@@ -19,6 +19,11 @@ export class QueryTransactionDto {
   @IsString()
   category?: string;
 
+  /** Free-text search over note + category. */
+  @IsOptional()
+  @IsString()
+  search?: string;
+
   /** Inclusive lower bound on occurredAt (ISO). */
   @IsOptional()
   @IsDateString()

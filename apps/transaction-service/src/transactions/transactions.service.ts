@@ -118,6 +118,10 @@ export class TransactionsService {
     if (query.from)
       qb.andWhere('t.occurred_at >= :from', { from: query.from });
     if (query.to) qb.andWhere('t.occurred_at < :to', { to: query.to });
+    if (query.search)
+      qb.andWhere('(t.note ILIKE :q OR t.category ILIKE :q)', {
+        q: `%${query.search}%`,
+      });
 
     const [items, total] = await qb.getManyAndCount();
     return { items, total, limit: query.limit, offset: query.offset };
