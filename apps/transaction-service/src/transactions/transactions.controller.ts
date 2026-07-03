@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   Req,
@@ -19,6 +20,7 @@ import {
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { QueryTransactionDto } from './dto/query-transaction.dto';
+import { UpdateTransactionDto } from './dto/update-transaction.dto';
 
 @Controller('transactions')
 @UseGuards(UserOrInternalGuard)
@@ -64,6 +66,15 @@ export class TransactionsController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.service.findOne(user.sub, id);
+  }
+
+  @Patch(':id')
+  update(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateTransactionDto,
+  ) {
+    return this.service.update(user.sub, id, dto);
   }
 
   @Delete(':id')

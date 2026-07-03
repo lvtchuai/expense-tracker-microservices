@@ -8,6 +8,7 @@ import { CATEGORIES, categoryColor, categoryIcon, money } from '@/lib/format';
 import { TopBar } from '../components/TopBar';
 import { CsvImport } from '../components/CsvImport';
 import { AmountInput } from '../components/AmountInput';
+import { EditModal } from '../components/EditModal';
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -23,6 +24,7 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [items, setItems] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<Transaction | null>(null);
 
   // add-form state
   const [type, setType] = useState<'expense' | 'income'>('expense');
@@ -261,13 +263,22 @@ export default function DashboardPage() {
                         {money(t.amount)}
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <button
-                          className="btn-danger"
-                          onClick={() => remove(t.id)}
-                          title="Delete"
-                        >
-                          Delete
-                        </button>
+                        <div className="row-actions">
+                          <button
+                            className="btn-edit"
+                            onClick={() => setEditing(t)}
+                            title="Edit"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="btn-danger"
+                            onClick={() => remove(t.id)}
+                            title="Delete"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -277,6 +288,14 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {editing && (
+        <EditModal
+          tx={editing}
+          onClose={() => setEditing(null)}
+          onSaved={refresh}
+        />
+      )}
     </>
   );
 }

@@ -695,6 +695,57 @@ code {
   line-height: 1.9;
 }
 
+/* ---------- Modal ---------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 40;
+  animation: fade-in 0.15s ease;
+}
+.modal {
+  width: 460px;
+  max-width: 100%;
+  box-shadow: var(--shadow);
+  animation: modal-in 0.2s ease;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.btn-edit {
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 7px;
+}
+.btn-edit:hover {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.row-actions {
+  display: inline-flex;
+  gap: 2px;
+  justify-content: flex-end;
+}
+
 /* fade/slide for content */
 .fade-in {
   animation: fade-in 0.25s ease;

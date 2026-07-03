@@ -142,6 +142,21 @@ export const txApi = {
       headers: json,
       body: JSON.stringify(input),
     }),
+  update: (
+    id: string,
+    patch: Partial<{
+      type: 'income' | 'expense';
+      amount: number;
+      category: string;
+      note: string;
+      occurredAt: string;
+    }>,
+  ) =>
+    request<Transaction>(`${TRANSACTION_URL}/api/transactions/${id}`, {
+      method: 'PATCH',
+      headers: json,
+      body: JSON.stringify(patch),
+    }),
   remove: (id: string) =>
     request<{ deleted: boolean }>(`${TRANSACTION_URL}/api/transactions/${id}`, {
       method: 'DELETE',

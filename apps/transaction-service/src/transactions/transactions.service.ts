@@ -11,6 +11,7 @@ import {
 import { Transaction } from './transaction.entity';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { QueryTransactionDto } from './dto/query-transaction.dto';
+import { UpdateTransactionDto } from './dto/update-transaction.dto';
 
 /** DI tokens for the RabbitMQ client proxies. */
 export const EVENT_BUS = 'EVENT_BUS';
@@ -126,6 +127,19 @@ export class TransactionsService {
     const tx = await this.repo.findOne({ where: { id, userId } });
     if (!tx) throw new NotFoundException('transaction not found');
     return tx;
+  }
+
+  async update(userId: string, id: string, dto: UpdateTransactionDto) {
+    const tx = await this.repo.findOne({ where: { id, userId } });
+    if (!tx) throw new NotFoundException('transaction not found');
+
+    if (dto.type !== undefined) tx.type = dto.type;
+    if (dto.amount !== undefined) tx.amount = dto.amount.toFixed(2);
+    if (dto.category !== undefined) tx.category = dto.category;
+    if (dto.note !== undefined) tx.note = dto.note;
+    if (dto.occurredAt !== undefined) tx.occurredAt = new Date(dto.occurredAt);
+
+    return this.repo.save(tx);
   }
 
   async remove(userId: string, id: string) {
