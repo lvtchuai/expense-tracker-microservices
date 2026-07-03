@@ -66,6 +66,7 @@ export class GroupsService {
         .createQueryBuilder('e')
         .select('COALESCE(SUM(e.amount), 0)', 'total')
         .where('e.group_id = :id', { id })
+        .andWhere("e.kind = 'expense'")
         .getRawOne<{ total: string }>();
       result.push({
         id: group.id,
@@ -96,6 +97,7 @@ export class GroupsService {
       })),
       expenses: expenses.map((e) => ({
         id: e.id,
+        kind: e.kind,
         paidBy: e.paidBy,
         amount: e.amount,
         description: e.description,
@@ -125,6 +127,43 @@ export class GroupsService {
     return this.getDetail(userId, groupId);
   }
 
+  async removeMember(userId: string, groupId: string, memberId: string) {
+    const group = await this.requireMembership(userId, groupId);
+    if (memberId === group.ownerId) {
+      throw new BadRequestException('the owner cannot be removed');
+    }
+    const member = group.members.find((m) => m.userId === memberId);
+    if (!member) throw new NotFoundException('member not found');
+
+    // Only the owner or the member themselves may remove.
+    if (userId !== group.ownerId && userId !== memberId) {
+      throw new ForbiddenException('only the owner can remove others');
+    }
+
+    // Block removal if they still have a non-zero balance.
+    const entries = await this.expenses.find({ where: { groupId } });
+    const bal = this.computeBalances(group.members, entries);
+    const theirNet = bal.perMember.find((m) => m.userId === memberId)?.net ?? 0;
+    if (Math.abs(theirNet) > 0.005) {
+      throw new BadRequestException(
+        'settle their balance before removing them',
+      );
+    }
+
+    await this.members.remove(member);
+    return this.getDetail(userId, groupId);
+  }
+
+  async deleteGroup(userId: string, groupId: string) {
+    const group = await this.groups.findOne({ where: { id: groupId } });
+    if (!group) throw new NotFoundException('group not found');
+    if (group.ownerId !== userId) {
+      throw new ForbiddenException('only the owner can delete the group');
+    }
+    await this.groups.remove(group);
+    return { deleted: true, id: groupId };
+  }
+
   // --- expenses ---
 
   async addExpense(userId: string, groupId: string, dto: CreateExpenseDto) {
@@ -145,6 +184,7 @@ export class GroupsService {
     const expense = this.expenses.create({
       group,
       groupId,
+      kind: 'expense',
       paidBy: dto.paidBy,
       amount: dto.amount.toFixed(2),
       description: dto.description,
@@ -155,46 +195,115 @@ export class GroupsService {
     return this.getDetail(userId, groupId);
   }
 
+  async deleteEntry(userId: string, groupId: string, entryId: string) {
+    await this.requireMembership(userId, groupId);
+    const entry = await this.expenses.findOne({
+      where: { id: entryId, groupId },
+    });
+    if (!entry) throw new NotFoundException('entry not found');
+    await this.expenses.remove(entry);
+    return this.getDetail(userId, groupId);
+  }
+
+  // --- settle up (records a payment: `from` paid `to`) ---
+
+  async settle(
+    userId: string,
+    groupId: string,
+    from: string,
+    to: string,
+    amount: number,
+  ) {
+    const group = await this.requireMembership(userId, groupId);
+    const memberIds = new Set(group.members.map((m) => m.userId));
+    if (!memberIds.has(from) || !memberIds.has(to)) {
+      throw new BadRequestException('both parties must be group members');
+    }
+    if (from === to) {
+      throw new BadRequestException('cannot settle with yourself');
+    }
+
+    const fromName =
+      group.members.find((m) => m.userId === from)?.displayName ?? 'someone';
+    const toName =
+      group.members.find((m) => m.userId === to)?.displayName ?? 'someone';
+
+    const payment = this.expenses.create({
+      group,
+      groupId,
+      kind: 'payment',
+      paidBy: from,
+      amount: amount.toFixed(2),
+      description: `Payment: ${fromName} → ${toName}`,
+      participantIds: [to],
+      occurredAt: new Date(),
+    });
+    await this.expenses.save(payment);
+    return this.getDetail(userId, groupId);
+  }
+
   // --- balances (the core "who owes whom") ---
 
   /**
-   * Net balance per member: (what they paid) − (their share of expenses).
-   * Positive = owed money; negative = owes money. Then greedily match
-   * debtors to creditors to produce a minimal settlement plan.
+   * Per member we track:
+   *  - paid:  total they fronted on expenses
+   *  - share: their portion of all expenses
+   *  - net = paid − share, then adjusted by settle-up payments.
+   * Positive net = owed money; negative = owes money. A greedy match of
+   * debtors→creditors yields the minimal outstanding settlement plan.
    */
-  private computeBalances(members: GroupMember[], expenses: GroupExpense[]) {
-    const net = new Map<string, number>();
-    members.forEach((m) => net.set(m.userId, 0));
+  private computeBalances(members: GroupMember[], entries: GroupExpense[]) {
+    const paid = new Map<string, number>();
+    const share = new Map<string, number>();
+    const settledAdj = new Map<string, number>();
+    members.forEach((m) => {
+      paid.set(m.userId, 0);
+      share.set(m.userId, 0);
+      settledAdj.set(m.userId, 0);
+    });
 
-    for (const e of expenses) {
+    for (const e of entries) {
       const amount = Number(e.amount);
-      const parts = e.participantIds.filter((p) => net.has(p));
-      if (parts.length === 0) continue;
-      const share = amount / parts.length;
-
-      // Payer is credited the full amount…
-      net.set(e.paidBy, (net.get(e.paidBy) ?? 0) + amount);
-      // …and every participant is debited their share.
-      for (const p of parts) {
-        net.set(p, (net.get(p) ?? 0) - share);
+      if (e.kind === 'payment') {
+        // `from` (paidBy) paid `to` (participantIds[0]) back.
+        // Paying down debt raises the payer's net and lowers the receiver's.
+        const to = e.participantIds[0];
+        if (paid.has(e.paidBy))
+          settledAdj.set(e.paidBy, (settledAdj.get(e.paidBy) ?? 0) + amount);
+        if (to && paid.has(to))
+          settledAdj.set(to, (settledAdj.get(to) ?? 0) - amount);
+        continue;
       }
+      // expense
+      const parts = e.participantIds.filter((p) => paid.has(p));
+      if (parts.length === 0) continue;
+      const per = amount / parts.length;
+      paid.set(e.paidBy, (paid.get(e.paidBy) ?? 0) + amount);
+      for (const p of parts) share.set(p, (share.get(p) ?? 0) + per);
     }
 
     const round = (n: number) => Math.round(n * 100) / 100;
-    const perMember = members.map((m) => ({
-      userId: m.userId,
-      displayName: m.displayName ?? m.email,
-      net: round(net.get(m.userId) ?? 0),
-    }));
+    const perMember = members.map((m) => {
+      const p = paid.get(m.userId) ?? 0;
+      const s = share.get(m.userId) ?? 0;
+      const net = p - s + (settledAdj.get(m.userId) ?? 0);
+      return {
+        userId: m.userId,
+        displayName: m.displayName ?? m.email,
+        paid: round(p),
+        share: round(s),
+        net: round(net),
+      };
+    });
 
     return {
       perMember,
-      settlements: this.settle(perMember),
+      settlements: this.simplifyDebts(perMember),
     };
   }
 
   /** Greedy debt simplification → list of {from, to, amount}. */
-  private settle(perMember: { userId: string; net: number }[]) {
+  private simplifyDebts(perMember: { userId: string; net: number }[]) {
     const creditors = perMember
       .filter((m) => m.net > 0.005)
       .map((m) => ({ ...m }))

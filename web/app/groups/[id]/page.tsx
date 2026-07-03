@@ -31,6 +31,45 @@ export default function GroupDetailPage() {
     if (ready) load();
   }, [ready, load]);
 
+  async function doSettle(from: string, to: string, amount: number) {
+    try {
+      setGroup(await groupApi.settle(params.id, from, to, amount));
+      toast('Payment recorded.', 'ok');
+    } catch (e) {
+      toast((e as Error).message, 'err');
+    }
+  }
+
+  async function deleteEntry(entryId: string) {
+    try {
+      setGroup(await groupApi.deleteEntry(params.id, entryId));
+      toast('Removed.', 'info');
+    } catch (e) {
+      toast((e as Error).message, 'err');
+    }
+  }
+
+  async function removeMember(memberId: string) {
+    try {
+      setGroup(await groupApi.removeMember(params.id, memberId));
+      toast('Member removed.', 'info');
+    } catch (e) {
+      toast((e as Error).message, 'err');
+    }
+  }
+
+  async function deleteGroup() {
+    if (!confirm('Delete this group and all its expenses? This cannot be undone.'))
+      return;
+    try {
+      await groupApi.deleteGroup(params.id);
+      toast('Group deleted.', 'info');
+      router.push('/groups');
+    } catch (e) {
+      toast((e as Error).message, 'err');
+    }
+  }
+
   if (!ready) return null;
 
   const nameOf = (userId: string) =>
@@ -82,25 +121,69 @@ export default function GroupDetailPage() {
                       <span className="settle-arrow">→ owes →</span>
                       <span className="pos">{nameOf(s.to)}</span>
                       <span className="settle-amount">{money(s.amount)}</span>
+                      <button
+                        className="btn-ghost settle-btn"
+                        onClick={() => doSettle(s.from, s.to, Number(s.amount))}
+                      >
+                        Mark paid
+                      </button>
                     </div>
                   ))}
                 </div>
               )}
-              <div className="net-grid">
-                {group.balances.perMember.map((m) => (
-                  <div key={m.userId} className="net-chip">
-                    <span>{m.displayName}</span>
-                    <span className={m.net >= 0 ? 'pos' : 'neg'}>
-                      {m.net >= 0 ? '+' : '−'}
-                      {money(Math.abs(m.net))}
-                    </span>
-                  </div>
-                ))}
+
+              {/* Per-member summary: paid / share / net */}
+              <div className="table-wrap" style={{ marginTop: 16 }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Member</th>
+                      <th style={{ textAlign: 'right' }}>Paid</th>
+                      <th style={{ textAlign: 'right' }}>Share</th>
+                      <th style={{ textAlign: 'right' }}>Net</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.balances.perMember.map((m) => (
+                      <tr key={m.userId}>
+                        <td>{m.displayName}</td>
+                        <td style={{ textAlign: 'right' }} className="muted">
+                          {money(m.paid)}
+                        </td>
+                        <td style={{ textAlign: 'right' }} className="muted">
+                          {money(m.share)}
+                        </td>
+                        <td
+                          style={{ textAlign: 'right', fontWeight: 600 }}
+                          className={
+                            m.net > 0.005
+                              ? 'pos'
+                              : m.net < -0.005
+                                ? 'neg'
+                                : 'muted'
+                          }
+                        >
+                          {m.net > 0.005 ? '+' : m.net < -0.005 ? '−' : ''}
+                          {money(Math.abs(m.net))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
+              <p className="hint" style={{ marginTop: 10, marginBottom: 0 }}>
+                Paid = what they fronted · Share = their part of expenses · Net =
+                owed (+) or owes (−).
+              </p>
             </div>
 
             <div className="grid grid-2">
-              <MembersCard group={group} onChanged={setGroup} />
+              <MembersCard
+                group={group}
+                myId={myId}
+                onChanged={setGroup}
+                onRemove={removeMember}
+              />
               <AddExpenseCard
                 group={group}
                 myId={myId}
@@ -108,9 +191,9 @@ export default function GroupDetailPage() {
               />
             </div>
 
-            {/* Expense history */}
+            {/* Expense + payment history */}
             <div className="card">
-              <h3 className="section-title">🧾 Expenses</h3>
+              <h3 className="section-title">🧾 Activity</h3>
               {group.expenses.length === 0 ? (
                 <div className="empty">
                   <span className="emoji">🧾</span>No expenses yet.
@@ -125,6 +208,7 @@ export default function GroupDetailPage() {
                         <th>Paid by</th>
                         <th>Split among</th>
                         <th style={{ textAlign: 'right' }}>Amount</th>
+                        <th></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -133,15 +217,36 @@ export default function GroupDetailPage() {
                           <td className="muted">
                             {e.occurredAt.slice(0, 10)}
                           </td>
-                          <td>{e.description}</td>
+                          <td>
+                            {e.kind === 'payment' && (
+                              <span
+                                className="badge badge-income"
+                                style={{ marginRight: 6 }}
+                              >
+                                payment
+                              </span>
+                            )}
+                            {e.description}
+                          </td>
                           <td>{nameOf(e.paidBy)}</td>
                           <td className="muted">
-                            {e.participantIds.map(nameOf).join(', ')}
+                            {e.kind === 'payment'
+                              ? `→ ${nameOf(e.participantIds[0])}`
+                              : e.participantIds.map(nameOf).join(', ')}
                           </td>
                           <td
                             style={{ textAlign: 'right', fontWeight: 600 }}
                           >
                             {money(e.amount)}
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              className="btn-danger"
+                              onClick={() => deleteEntry(e.id)}
+                              title="Delete"
+                            >
+                              ✕
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -150,6 +255,21 @@ export default function GroupDetailPage() {
                 </div>
               )}
             </div>
+
+            {/* Danger zone: owner can delete the group */}
+            {group.ownerId === myId && (
+              <div className="card danger-zone">
+                <div>
+                  <strong>Delete group</strong>
+                  <div className="hint">
+                    Permanently remove this group and all its expenses.
+                  </div>
+                </div>
+                <button className="btn-danger-solid" onClick={deleteGroup}>
+                  Delete group
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -159,11 +279,16 @@ export default function GroupDetailPage() {
 
 function MembersCard({
   group,
+  myId,
   onChanged,
+  onRemove,
 }: {
   group: GroupDetail;
+  myId?: string;
   onChanged: (g: GroupDetail) => void;
+  onRemove: (memberId: string) => void;
 }) {
+  const isOwner = group.ownerId === myId;
   const toast = useToast();
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
@@ -195,10 +320,21 @@ function MembersCard({
               <div>{m.displayName || m.email}</div>
               <div className="hint">{m.email}</div>
             </div>
-            {m.userId === group.ownerId && (
+            {m.userId === group.ownerId ? (
               <span className="badge badge-income" style={{ marginLeft: 'auto' }}>
                 owner
               </span>
+            ) : (
+              (isOwner || m.userId === myId) && (
+                <button
+                  className="btn-danger"
+                  style={{ marginLeft: 'auto' }}
+                  onClick={() => onRemove(m.userId)}
+                  title={m.userId === myId ? 'Leave group' : 'Remove'}
+                >
+                  {m.userId === myId ? 'Leave' : 'Remove'}
+                </button>
+              )
             )}
           </div>
         ))}

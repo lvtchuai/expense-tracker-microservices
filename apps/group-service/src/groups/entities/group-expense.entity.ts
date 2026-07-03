@@ -7,9 +7,13 @@ import {
 } from 'typeorm';
 import { Group } from './group.entity';
 
+export type EntryKind = 'expense' | 'payment';
+
 /**
- * A shared expense: one member paid `amount`, split evenly among
- * `participantIds`. Balances are derived from these rows (not stored).
+ * A ledger entry in a group. Two kinds:
+ *  - 'expense': `paidBy` paid `amount`, split evenly among `participantIds`.
+ *  - 'payment': a settle-up — `paidBy` paid `amount` back to `participantIds[0]`.
+ * Balances are derived from these rows (not stored).
  */
 @Entity('group_expenses')
 export class GroupExpense {
@@ -22,7 +26,10 @@ export class GroupExpense {
   @Column({ name: 'group_id' })
   groupId: string;
 
-  /** userId of the member who paid. */
+  @Column({ type: 'varchar', length: 16, default: 'expense' })
+  kind: EntryKind;
+
+  /** userId of the member who paid (expense payer, or settle-up sender). */
   @Column({ name: 'paid_by' })
   paidBy: string;
 

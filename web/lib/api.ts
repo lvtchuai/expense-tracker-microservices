@@ -216,6 +216,7 @@ export interface GroupMemberDTO {
 }
 export interface GroupExpenseDTO {
   id: string;
+  kind: 'expense' | 'payment';
   paidBy: string;
   amount: string;
   description: string;
@@ -229,7 +230,13 @@ export interface GroupDetail {
   members: GroupMemberDTO[];
   expenses: GroupExpenseDTO[];
   balances: {
-    perMember: { userId: string; displayName: string; net: number }[];
+    perMember: {
+      userId: string;
+      displayName: string;
+      paid: number;
+      share: number;
+      net: number;
+    }[];
     settlements: { from: string; to: string; amount: string }[];
   };
 }
@@ -264,5 +271,25 @@ export const groupApi = {
       method: 'POST',
       headers: json,
       body: JSON.stringify(input),
+    }),
+  deleteEntry: (id: string, entryId: string) =>
+    request<GroupDetail>(
+      `${GROUP_URL}/api/groups/${id}/expenses/${entryId}`,
+      { method: 'DELETE' },
+    ),
+  settle: (id: string, from: string, to: string, amount: number) =>
+    request<GroupDetail>(`${GROUP_URL}/api/groups/${id}/settle`, {
+      method: 'POST',
+      headers: json,
+      body: JSON.stringify({ from, to, amount }),
+    }),
+  removeMember: (id: string, memberId: string) =>
+    request<GroupDetail>(
+      `${GROUP_URL}/api/groups/${id}/members/${memberId}`,
+      { method: 'DELETE' },
+    ),
+  deleteGroup: (id: string) =>
+    request<{ deleted: boolean }>(`${GROUP_URL}/api/groups/${id}`, {
+      method: 'DELETE',
     }),
 };
