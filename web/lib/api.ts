@@ -3,6 +3,7 @@
 import {
   AUTH_URL,
   GROUP_URL,
+  NOTIFICATION_URL,
   REPORT_URL,
   TOKEN_KEY,
   TRANSACTION_URL,
@@ -292,4 +293,36 @@ export const groupApi = {
     request<{ deleted: boolean }>(`${GROUP_URL}/api/groups/${id}`, {
       method: 'DELETE',
     }),
+};
+
+// --- notification-service ---
+export interface NotificationDTO {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  link?: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
+export const notifApi = {
+  list: (limit = 20) =>
+    request<NotificationDTO[]>(
+      `${NOTIFICATION_URL}/api/notifications?limit=${limit}`,
+    ),
+  unreadCount: () =>
+    request<{ count: number }>(
+      `${NOTIFICATION_URL}/api/notifications/unread-count`,
+    ),
+  markRead: (id: string) =>
+    request<{ ok: boolean }>(
+      `${NOTIFICATION_URL}/api/notifications/${id}/read`,
+      { method: 'PATCH' },
+    ),
+  markAllRead: () =>
+    request<{ ok: boolean }>(
+      `${NOTIFICATION_URL}/api/notifications/read-all`,
+      { method: 'PATCH' },
+    ),
 };

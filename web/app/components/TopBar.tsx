@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { AuthUser } from '@/lib/api';
 import { logout } from '@/lib/useAuth';
+import { NotificationBell } from './NotificationBell';
 
 function initials(user: AuthUser | null): string {
   const src = user?.displayName || user?.email || '?';
@@ -48,6 +49,7 @@ export function TopBar({ user }: { user: AuthUser | null }) {
             borderLeft: '1px solid var(--border)',
           }}
         >
+          <NotificationBell />
           <div className="avatar" title={user?.email ?? ''}>
             {initials(user)}
           </div>

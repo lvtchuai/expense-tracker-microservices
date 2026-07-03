@@ -97,6 +97,22 @@ services:
       timeout: 5s
       retries: 10
 
+  notification-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: notifications
+    ports:
+      - "${NOTIFICATION_DB_PORT:-5436}:5432"
+    volumes:
+      - notification-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d notifications"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   notification-service:
     build:
       context: .
@@ -105,10 +121,18 @@ services:
         APP: notification-service
     environment:
       PORT: 3003
+      DB_HOST: notification-db
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_NAME: notifications
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
     ports:
       - "${NOTIFICATION_PORT:-3003}:3003"
     depends_on:
+      notification-db:
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
 
@@ -180,6 +204,8 @@ services:
       # Resolves members by email via auth-service's internal endpoint.
       AUTH_SERVICE_URL: http://auth-service:3001
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key-change-me}
+      # Emits in-app notifications to notification-service via RabbitMQ.
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
     ports:
       - "${GROUP_PORT:-3006}:3006"
     depends_on:
@@ -187,6 +213,8 @@ services:
         condition: service_healthy
       auth-service:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
   web:
     build:
@@ -198,6 +226,7 @@ services:
         NEXT_PUBLIC_TRANSACTION_URL: http://localhost:${TRANSACTION_PORT:-3002}
         NEXT_PUBLIC_REPORT_URL: http://localhost:${REPORT_PORT:-3005}
         NEXT_PUBLIC_GROUP_URL: http://localhost:${GROUP_PORT:-3006}
+        NEXT_PUBLIC_NOTIFICATION_URL: http://localhost:${NOTIFICATION_PORT:-3003}
     ports:
       - "${WEB_PORT:-3000}:3000"
     depends_on:
@@ -205,8 +234,10 @@ services:
       - transaction-service
       - report-service
       - group-service
+      - notification-service
 
 volumes:
   group-db-data:
+  notification-db-data:
   auth-db-data:
   transaction-db-data:

@@ -8,6 +8,8 @@ export const REPORT_URL =
   process.env.NEXT_PUBLIC_REPORT_URL ?? 'http://localhost:3005';
 export const GROUP_URL =
   process.env.NEXT_PUBLIC_GROUP_URL ?? 'http://localhost:3006';
+export const NOTIFICATION_URL =
+  process.env.NEXT_PUBLIC_NOTIFICATION_URL ?? 'http://localhost:3003';
 
 export const TOKEN_KEY = 'expense_tracker_token';
 export const USER_KEY = 'expense_tracker_user';

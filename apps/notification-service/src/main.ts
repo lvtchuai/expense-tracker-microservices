@@ -11,6 +11,11 @@ import { NotificationServiceModule } from './notification-service.module';
 async function bootstrap() {
   const app = await NestFactory.create(NotificationServiceModule);
 
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN?.split(',') ?? true,
+  });
+  app.setGlobalPrefix('api', { exclude: ['health', 'health/ready'] });
+
   const rabbitUrl = process.env.RABBITMQ_URL ?? 'amqp://localhost:5672';
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,

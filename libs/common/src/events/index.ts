@@ -18,6 +18,29 @@ export interface TransactionCreatedEvent {
 /** Name of the queue notification-service consumes from. */
 export const NOTIFICATIONS_QUEUE = 'notifications_queue';
 
+/**
+ * Generic in-app notification event. Any producer (e.g. group-service) emits
+ * this with a resolved recipient + message; notification-service persists one
+ * row per event and serves them to the bell UI. Keeping the payload generic
+ * avoids coupling notification-service to each producer's domain.
+ */
+export const NOTIFICATION_CREATED = 'notification.created';
+
+export type NotificationType =
+  | 'group_member_added'
+  | 'group_expense_added'
+  | 'group_settled';
+
+export interface NotificationCreatedEvent {
+  /** userId (auth-service) who should receive this. */
+  recipientId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  /** Optional deep-link target, e.g. `/groups/<id>`. */
+  link?: string;
+}
+
 // --- CSV import flow ---
 
 /** Queue import-worker consumes from (one message per CSV row). */

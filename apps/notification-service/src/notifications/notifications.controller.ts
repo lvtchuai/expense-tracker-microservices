@@ -1,24 +1,43 @@
-import { Controller, Logger } from '@nestjs/common';
-import { EventPattern, Payload } from '@nestjs/microservices';
 import {
-  TRANSACTION_CREATED,
-  TransactionCreatedEvent,
-} from '@app/common';
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { CurrentUser, JwtAuthGuard, JwtPayload } from '@app/common';
+import { NotificationsService } from './notifications.service';
 
-/**
- * RabbitMQ consumer. In Phase 2 we just "send" a notification by logging it;
- * a real channel (email/push) plugs in here later without changing the event
- * contract.
- */
-@Controller()
+@Controller('notifications')
+@UseGuards(JwtAuthGuard)
 export class NotificationsController {
-  private readonly logger = new Logger(NotificationsController.name);
+  constructor(private readonly service: NotificationsService) {}
 
-  @EventPattern(TRANSACTION_CREATED)
-  handleTransactionCreated(@Payload() event: TransactionCreatedEvent) {
-    const verb = event.type === 'expense' ? 'spent' : 'received';
-    this.logger.log(
-      `📧 notify user ${event.userId}: ${verb} ${event.amount} on "${event.category}" (tx ${event.transactionId})`,
-    );
+  @Get()
+  list(
+    @CurrentUser() user: JwtPayload,
+    @Query('limit') limit?: string,
+  ) {
+    return this.service.list(user.sub, limit ? Number(limit) : 20);
+  }
+
+  @Get('unread-count')
+  async unread(@CurrentUser() user: JwtPayload) {
+    return { count: await this.service.unreadCount(user.sub) };
+  }
+
+  @Patch('read-all')
+  readAll(@CurrentUser() user: JwtPayload) {
+    return this.service.markAllRead(user.sub);
+  }
+
+  @Patch(':id/read')
+  read(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.service.markRead(user.sub, id);
   }
 }

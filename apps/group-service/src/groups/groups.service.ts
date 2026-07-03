@@ -12,6 +12,12 @@ import { GroupExpense } from './entities/group-expense.entity';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { AuthClient } from '../auth/auth.client';
+import { NotificationsProducer } from './notifications.producer';
+
+/** Format an amount as VND for notification text. */
+function vnd(n: number | string): string {
+  return Math.round(Number(n)).toLocaleString('vi-VN') + ' ₫';
+}
 
 @Injectable()
 export class GroupsService {
@@ -22,6 +28,7 @@ export class GroupsService {
     @InjectRepository(GroupExpense)
     private readonly expenses: Repository<GroupExpense>,
     private readonly authClient: AuthClient,
+    private readonly notify: NotificationsProducer,
   ) {}
 
   // --- groups ---
@@ -124,6 +131,14 @@ export class GroupsService {
       displayName: resolved.displayName ?? undefined,
     });
     await this.members.save(member);
+
+    this.notify.emit({
+      recipientId: resolved.id,
+      type: 'group_member_added',
+      title: `Added to "${group.name}"`,
+      body: `You were added to the group "${group.name}".`,
+      link: `/groups/${group.id}`,
+    });
     return this.getDetail(userId, groupId);
   }
 
@@ -192,6 +207,22 @@ export class GroupsService {
       occurredAt: dto.occurredAt ? new Date(dto.occurredAt) : new Date(),
     });
     await this.expenses.save(expense);
+
+    // Notify each participant (except the payer) of their share.
+    const payerName =
+      group.members.find((m) => m.userId === dto.paidBy)?.displayName ??
+      'Someone';
+    const share = dto.amount / dto.participantIds.length;
+    for (const pid of dto.participantIds) {
+      if (pid === dto.paidBy) continue;
+      this.notify.emit({
+        recipientId: pid,
+        type: 'group_expense_added',
+        title: `New expense in "${group.name}"`,
+        body: `${payerName} paid ${vnd(dto.amount)} for "${dto.description}". Your share is ${vnd(share)}.`,
+        link: `/groups/${group.id}`,
+      });
+    }
     return this.getDetail(userId, groupId);
   }
 
@@ -239,6 +270,15 @@ export class GroupsService {
       occurredAt: new Date(),
     });
     await this.expenses.save(payment);
+
+    // Notify the person who was paid back.
+    this.notify.emit({
+      recipientId: to,
+      type: 'group_settled',
+      title: `Payment received in "${group.name}"`,
+      body: `${fromName} paid you ${vnd(amount)}.`,
+      link: `/groups/${group.id}`,
+    });
     return this.getDetail(userId, groupId);
   }
 
