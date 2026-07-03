@@ -643,6 +643,58 @@ code {
   flex: 0 0 auto;
 }
 
+/* ---------- Review (editable import) table ---------- */
+.review-table {
+  max-height: 380px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.review-table table {
+  font-size: 13px;
+}
+.review-table th {
+  position: sticky;
+  top: 0;
+  background: var(--panel-2);
+  z-index: 1;
+}
+.review-table td {
+  padding: 6px 8px;
+}
+.cell-input {
+  padding: 7px 9px;
+  font-size: 13px;
+  border-radius: 7px;
+}
+.seg-sm {
+  padding: 2px;
+}
+.seg-sm button {
+  padding: 4px 10px;
+  font-size: 12.5px;
+}
+.row-del {
+  background: transparent;
+  color: var(--faint);
+  padding: 4px 7px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.row-del:hover {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+/* Tips list */
+.tips {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.9;
+}
+
 /* fade/slide for content */
 .fade-in {
   animation: fade-in 0.25s ease;

@@ -4,15 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { Summary, Transaction, txApi } from '@/lib/api';
 import { useRequireAuth } from '@/lib/useAuth';
 import { useToast } from '@/lib/toast';
-import { categoryColor, categoryIcon, money } from '@/lib/format';
+import { CATEGORIES, categoryColor, categoryIcon, money } from '@/lib/format';
 import { TopBar } from '../components/TopBar';
 import { CsvImport } from '../components/CsvImport';
 import { AmountInput } from '../components/AmountInput';
-
-const CATEGORIES = [
-  'groceries', 'dining', 'transport', 'coffee', 'rent',
-  'utilities', 'salary', 'freelance', 'entertainment', 'other',
-];
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -195,9 +190,23 @@ export default function DashboardPage() {
             </form>
           </div>
 
-          {/* CSV import */}
-          <CsvImport onDone={refresh} />
+          {/* Quick tips card next to the add form */}
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <h3 className="section-title">💡 Tips</h3>
+            <ul className="tips">
+              <li>Add single transactions on the left.</li>
+              <li>
+                Import many at once below — upload a Techcombank statement
+                (<code>.xlsx</code>) and it&apos;s parsed automatically.
+              </li>
+              <li>Review &amp; edit every row before it&apos;s saved.</li>
+              <li>See charts &amp; monthly breakdowns on the Reports page.</li>
+            </ul>
+          </div>
         </div>
+
+        {/* CSV / Excel import — full width for the review table */}
+        <CsvImport onDone={refresh} />
 
         {/* Transactions table */}
         <div className="card">

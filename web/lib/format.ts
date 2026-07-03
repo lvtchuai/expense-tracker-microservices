@@ -1,5 +1,11 @@
 // Shared formatting + category color helpers.
 
+/** Categories offered in dropdowns across the app. */
+export const CATEGORIES = [
+  'groceries', 'dining', 'transport', 'coffee', 'rent',
+  'utilities', 'salary', 'freelance', 'entertainment', 'other',
+];
+
 /**
  * Format an amount as Vietnamese đồng: grouped by thousands, no decimals,
  * with a trailing ₫ (e.g. "1.400.000 ₫"). Amounts are stored as numeric(12,2)
