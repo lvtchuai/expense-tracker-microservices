@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { AuthUser } from '@/lib/api';
 import { logout } from '@/lib/useAuth';
+import { useTheme } from '@/lib/useTheme';
 import { NotificationBell } from './NotificationBell';
 
 function initials(user: AuthUser | null): string {
@@ -14,6 +15,7 @@ function initials(user: AuthUser | null): string {
 export function TopBar({ user }: { user: AuthUser | null }) {
   const router = useRouter();
   const path = usePathname();
+  const { theme, toggle } = useTheme();
 
   const link = (href: string, label: string, icon: string) => (
     <a
@@ -49,6 +51,14 @@ export function TopBar({ user }: { user: AuthUser | null }) {
             borderLeft: '1px solid var(--border)',
           }}
         >
+          <button
+            className="bell-btn"
+            onClick={toggle}
+            aria-label="Toggle theme"
+            title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
           <NotificationBell />
           <div className="avatar" title={user?.email ?? ''}>
             {initials(user)}
