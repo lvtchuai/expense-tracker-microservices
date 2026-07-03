@@ -24,7 +24,7 @@ export function TopBar({ user }: { user: AuthUser | null }) {
       className={`nav-link ${path === href ? 'active' : ''}`}
     >
       <span>{icon}</span>
-      <span>{label}</span>
+      <span className="nav-label">{label}</span>
     </a>
   );
 
@@ -32,7 +32,7 @@ export function TopBar({ user }: { user: AuthUser | null }) {
     <div className="topbar">
       <div className="brand">
         <span className="logo">💸</span>
-        <span>Expense Tracker</span>
+        <span className="brand-text">Expense Tracker</span>
       </div>
       <div className="nav">
         {link('/dashboard', 'Dashboard', '🏠')}

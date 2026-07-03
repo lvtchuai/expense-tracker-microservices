@@ -190,7 +190,7 @@ export function TransactionList({
       ) : (
         <>
           <div className="table-wrap">
-            <table>
+            <table className="tx-table">
               <thead>
                 <tr>
                   <th>Date</th>
@@ -203,23 +203,27 @@ export function TransactionList({
               <tbody>
                 {items.map((t) => (
                   <tr key={t.id}>
-                    <td className="muted">{fmtDate(t.occurredAt)}</td>
-                    <td>
+                    <td className="muted" data-label="Date">
+                      {fmtDate(t.occurredAt)}
+                    </td>
+                    <td data-label="Category">
                       <span
                         className="cat-dot"
                         style={{ background: categoryColor(t.category) }}
                       />
                       {categoryIcon(t.category)} {t.category}
                     </td>
-                    <td className="muted">{t.note || '—'}</td>
+                    <td className="muted" data-label="Note">
+                      {t.note || '—'}
+                    </td>
                     <td
-                      style={{ textAlign: 'right', fontWeight: 600 }}
-                      className={t.type === 'income' ? 'pos' : 'neg'}
+                      data-label="Amount"
+                      className={`tx-amount ${t.type === 'income' ? 'pos' : 'neg'}`}
                     >
                       {t.type === 'income' ? '+' : '−'}
                       {money(t.amount)}
                     </td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td className="tx-actions">
                       <div className="row-actions">
                         <button className="btn-edit" onClick={() => onEdit(t)}>
                           Edit

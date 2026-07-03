@@ -776,6 +776,101 @@ code {
   justify-content: flex-end;
 }
 
+/* ---------- Responsive ---------- */
+@media (max-width: 640px) {
+  .container {
+    padding: 18px 14px 48px;
+  }
+  .topbar {
+    padding: 12px 14px;
+  }
+  .brand-text {
+    display: none;
+  }
+  .nav-label {
+    display: none;
+  }
+  .nav-link {
+    padding: 8px 11px;
+  }
+  .title {
+    font-size: 20px;
+  }
+  .stat .value {
+    font-size: 24px;
+  }
+
+  /* Filter bar stacks: search full width, selects two-up */
+  .filter-bar > input {
+    flex: 1 1 100%;
+  }
+  .filter-bar > select {
+    flex: 1 1 calc(50% - 5px);
+  }
+
+  .modal {
+    width: 100%;
+  }
+
+  /* Transaction table → stacked cards */
+  .tx-table thead {
+    display: none;
+  }
+  .tx-table,
+  .tx-table tbody,
+  .tx-table tr,
+  .tx-table td {
+    display: block;
+    width: 100%;
+  }
+  .tx-table tr {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: var(--panel-2);
+  }
+  .tx-table tr:hover {
+    background: var(--panel-2);
+  }
+  .tx-table td {
+    border: none;
+    padding: 4px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    text-align: right;
+  }
+  .tx-table td::before {
+    content: attr(data-label);
+    color: var(--faint);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .tx-table td.tx-amount {
+    font-size: 17px;
+    font-weight: 700;
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .tx-table td.tx-actions {
+    padding-top: 10px;
+    justify-content: flex-end;
+  }
+  .tx-table td.tx-actions::before {
+    content: '';
+  }
+
+  /* Review (import) table also becomes cramped — allow horizontal scroll */
+  .review-table {
+    max-height: 300px;
+  }
+}
+
 /* fade/slide for content */
 .fade-in {
   animation: fade-in 0.25s ease;
