@@ -54,6 +54,15 @@
         "tsConfigPath": "apps/report-service/tsconfig.app.json"
       }
     },
+    "group-service": {
+      "type": "application",
+      "root": "apps/group-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/group-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/group-service/tsconfig.app.json"
+      }
+    },
     "common": {
       "type": "library",
       "root": "libs/common",

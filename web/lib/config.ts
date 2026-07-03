@@ -6,6 +6,8 @@ export const TRANSACTION_URL =
   process.env.NEXT_PUBLIC_TRANSACTION_URL ?? 'http://localhost:3002';
 export const REPORT_URL =
   process.env.NEXT_PUBLIC_REPORT_URL ?? 'http://localhost:3005';
+export const GROUP_URL =
+  process.env.NEXT_PUBLIC_GROUP_URL ?? 'http://localhost:3006';
 
 export const TOKEN_KEY = 'expense_tracker_token';
 export const USER_KEY = 'expense_tracker_user';

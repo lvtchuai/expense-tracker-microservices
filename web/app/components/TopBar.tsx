@@ -36,6 +36,7 @@ export function TopBar({ user }: { user: AuthUser | null }) {
       </div>
       <div className="nav">
         {link('/dashboard', 'Dashboard', '🏠')}
+        {link('/groups', 'Groups', '👥')}
         {link('/reports', 'Reports', '📊')}
         <div
           style={{

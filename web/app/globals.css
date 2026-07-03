@@ -776,6 +776,81 @@ code {
   justify-content: flex-end;
 }
 
+/* ---------- Groups ---------- */
+.group-card {
+  text-align: left;
+  cursor: pointer;
+  background: var(--panel);
+}
+.group-card-name {
+  font-size: 17px;
+  font-weight: 650;
+}
+.settle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--panel-2);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+.settle-arrow {
+  color: var(--faint);
+  font-size: 13px;
+  font-weight: 500;
+}
+.settle-amount {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.net-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.net-chip {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--panel-2);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 7px 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.chip-on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 640px) {
   .container {

@@ -2,6 +2,7 @@
 
 import {
   AUTH_URL,
+  GROUP_URL,
   REPORT_URL,
   TOKEN_KEY,
   TRANSACTION_URL,
@@ -198,4 +199,70 @@ export const reportApi = {
     request<MonthlyReport>(
       `${REPORT_URL}/api/reports/monthly?year=${year}&month=${month}`,
     ),
+};
+
+// --- group-service ---
+export interface GroupSummary {
+  id: string;
+  name: string;
+  ownerId: string;
+  memberCount: number;
+  totalSpent: string;
+}
+export interface GroupMemberDTO {
+  userId: string;
+  email: string;
+  displayName: string | null;
+}
+export interface GroupExpenseDTO {
+  id: string;
+  paidBy: string;
+  amount: string;
+  description: string;
+  participantIds: string[];
+  occurredAt: string;
+}
+export interface GroupDetail {
+  id: string;
+  name: string;
+  ownerId: string;
+  members: GroupMemberDTO[];
+  expenses: GroupExpenseDTO[];
+  balances: {
+    perMember: { userId: string; displayName: string; net: number }[];
+    settlements: { from: string; to: string; amount: string }[];
+  };
+}
+
+export const groupApi = {
+  list: () => request<GroupSummary[]>(`${GROUP_URL}/api/groups`),
+  create: (name: string) =>
+    request<GroupDetail>(`${GROUP_URL}/api/groups`, {
+      method: 'POST',
+      headers: json,
+      body: JSON.stringify({ name }),
+    }),
+  detail: (id: string) =>
+    request<GroupDetail>(`${GROUP_URL}/api/groups/${id}`),
+  addMember: (id: string, email: string) =>
+    request<GroupDetail>(`${GROUP_URL}/api/groups/${id}/members`, {
+      method: 'POST',
+      headers: json,
+      body: JSON.stringify({ email }),
+    }),
+  addExpense: (
+    id: string,
+    input: {
+      paidBy: string;
+      amount: number;
+      description: string;
+      participantIds: string[];
+      occurredAt?: string;
+    },
+  ) =>
+    request<GroupDetail>(`${GROUP_URL}/api/groups/${id}/expenses`, {
+      method: 'POST',
+      headers: json,
+      body: JSON.stringify(input),
+    }),
 };

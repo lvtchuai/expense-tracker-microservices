@@ -1,5 +1,18 @@
-import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
-import { CurrentUser, JwtAuthGuard, JwtPayload } from '@app/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  CurrentUser,
+  InternalOnlyGuard,
+  JwtAuthGuard,
+  JwtPayload,
+} from '@app/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -24,5 +37,15 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() user: JwtPayload) {
     return user;
+  }
+
+  /**
+   * Internal-only: resolve a user by email (used by group-service to add
+   * members by email). Requires the internal API key.
+   */
+  @Get('internal/by-email')
+  @UseGuards(InternalOnlyGuard)
+  byEmail(@Query('email') email: string) {
+    return this.auth.findByEmail(email);
   }
 }

@@ -4,4 +4,5 @@ export * from './auth/current-user.decorator';
 export * from './auth/jwt-payload.interface';
 export * from './auth/internal.constants';
 export * from './auth/user-or-internal.guard';
+export * from './auth/internal-only.guard';
 export * from './events';

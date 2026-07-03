@@ -53,6 +53,7 @@ NestJS 10 · Next.js 14 · TypeScript · TypeORM · PostgreSQL 16 · RabbitMQ 3.
 | notification-service | 3003 | RabbitMQ consumer | queue depth |
 | import-worker | 3004 | RabbitMQ consumer | KEDA (queue depth) |
 | report-service | 3005 | HTTP, CPU-heavy | HPA (CPU) |
+| group-service | 3006 | HTTP + Postgres, calls auth | replicas |
 
 ## Layout
 ```
@@ -62,7 +63,8 @@ apps/
   notification-service/ RabbitMQ consumer, sends notifications
   import-worker/        RabbitMQ consumer, validates CSV rows → creates txns
   report-service/       CPU-heavy monthly rollups, calls transaction-service API
-web/                    Next.js dashboard (login, transactions, CSV import, report charts)
+  group-service/        shared-expense groups: members, expenses, split & balances
+web/                    Next.js dashboard (login, transactions, CSV import, reports, groups)
 libs/
   common/               health, JWT guard, internal-auth guard, @CurrentUser, event contracts
 Dockerfile              shared multi-stage build (--build-arg APP=…)

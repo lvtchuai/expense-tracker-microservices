@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -53,6 +54,17 @@ export class AuthService {
     }
 
     return this.issueToken(user);
+  }
+
+  /** Internal lookup for group-service: resolve a user by email. */
+  async findByEmail(email: string) {
+    const user = await this.users.findOne({ where: { email } });
+    if (!user) throw new NotFoundException('user not found');
+    return {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName ?? null,
+    };
   }
 
   private issueToken(user: User) {
