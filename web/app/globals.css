@@ -1086,6 +1086,91 @@ code {
   .review-table {
     max-height: 300px;
   }
+
+  /* Stack two-up form rows (amount+date, add-member, period pickers, etc.) */
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .row > * {
+    width: 100%;
+  }
+  .row .spacer {
+    display: none;
+  }
+
+  /* Page headers: tighter, allow back-button rows to wrap */
+  .page-head {
+    margin-bottom: 16px;
+  }
+  .subtitle {
+    font-size: 13px;
+  }
+
+  /* Settle rows wrap instead of overflowing */
+  .settle-row {
+    flex-wrap: wrap;
+    gap: 8px 10px;
+  }
+  .settle-amount {
+    margin-left: 0;
+  }
+  .settle-btn {
+    margin-left: auto;
+  }
+
+  /* Danger zone stacks */
+  .danger-zone {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+  }
+  .btn-danger-solid {
+    width: 100%;
+  }
+
+  /* Net chips + members stay readable */
+  .net-chip {
+    flex: 1 1 auto;
+  }
+
+  /* Notification panel spans the viewport nicely */
+  .bell-panel {
+    position: fixed;
+    right: 8px;
+    left: 8px;
+    width: auto;
+    max-width: none;
+  }
+
+  /* Generic data tables (group activity/summary, reports) scroll rather than
+     squash; the .table-wrap already provides overflow-x. Keep them compact. */
+  table {
+    font-size: 13px;
+  }
+  th,
+  td {
+    padding: 9px 10px;
+    white-space: nowrap;
+  }
+  /* …but the transaction card table must NOT be nowrap */
+  .tx-table td {
+    white-space: normal;
+  }
+}
+
+/* Small phones: single-column net chips, smaller brand */
+@media (max-width: 400px) {
+  .brand {
+    font-size: 15px;
+  }
+  .nav-link span:first-child {
+    font-size: 15px;
+  }
+  .stat .value {
+    font-size: 21px;
+  }
 }
 
 /* fade/slide for content */
