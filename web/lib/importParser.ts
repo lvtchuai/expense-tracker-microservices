@@ -32,6 +32,115 @@ const HEADERS: Record<string, string[]> = {
   note: ['note', 'ghichu', 'ghi chú', 'mô tả', 'mo ta', 'noi dung', 'nội dung', 'description'],
 };
 
+/**
+ * Bank-statement layout (e.g. Techcombank "Sổ phụ"): the transaction table
+ * lives partway down the sheet, with SEPARATE debit/credit columns instead of
+ * one type column. We detect it by finding a header row that has both a
+ * debit-ish and credit-ish column.
+ */
+const STMT_HEADERS = {
+  date: ['ngày giao dịch', 'giao dịch', 'transaction', 'ngày', 'date'],
+  remitter: ['đối tác', 'remitter'],
+  details: ['diễn giải', 'details', 'nội dung', 'description'],
+  debit: ['nợ', 'debit', 'nợ tktt'],
+  credit: ['có', 'credit', 'có tktt'],
+};
+
+function headerMatches(cell: string, aliases: string[]): boolean {
+  const n = normalizeHeader(cell);
+  return aliases.some((a) => n.includes(a));
+}
+
+/** Find the statement header row + its debit/credit column indices, or null. */
+function detectStatement(grid: unknown[][]): {
+  headerIdx: number;
+  cols: Record<string, number>;
+} | null {
+  for (let i = 0; i < Math.min(grid.length, 40); i++) {
+    const cells = (grid[i] as unknown[]).map((c) => String(c ?? ''));
+    let debit = -1;
+    let credit = -1;
+    const cols: Record<string, number> = {};
+    cells.forEach((c, j) => {
+      if (debit < 0 && headerMatches(c, STMT_HEADERS.debit)) debit = j;
+      if (credit < 0 && headerMatches(c, STMT_HEADERS.credit)) credit = j;
+      if (cols.date == null && headerMatches(c, STMT_HEADERS.date)) cols.date = j;
+      if (cols.remitter == null && headerMatches(c, STMT_HEADERS.remitter))
+        cols.remitter = j;
+      if (cols.details == null && headerMatches(c, STMT_HEADERS.details))
+        cols.details = j;
+    });
+    // A statement needs both money columns to be present and distinct.
+    if (debit >= 0 && credit >= 0 && debit !== credit) {
+      cols.debit = debit;
+      cols.credit = credit;
+      return { headerIdx: i, cols };
+    }
+  }
+  return null;
+}
+
+/** True for summary rows we must skip (opening/closing balance, totals). */
+function isBalanceRow(cells: unknown[]): boolean {
+  const joined = cells.map((c) => normalizeHeader(String(c ?? ''))).join(' ');
+  return (
+    joined.includes('số dư') ||
+    joined.includes('balance') ||
+    joined.includes('opening') ||
+    joined.includes('closing') ||
+    joined.includes('đầu kỳ') ||
+    joined.includes('cuối kỳ')
+  );
+}
+
+function parseStatement(
+  grid: unknown[][],
+  headerIdx: number,
+  cols: Record<string, number>,
+): ParseResult {
+  const rows: ParsedRow[] = [];
+  const errors: { row: number; reason: string }[] = [];
+
+  for (let i = headerIdx + 1; i < grid.length; i++) {
+    const rowNo = i + 1;
+    const cells = grid[i] as unknown[];
+    if (cells.every((c) => String(c ?? '').trim() === '')) continue;
+    if (isBalanceRow(cells)) continue;
+
+    const get = (f: string) => (cols[f] != null ? cells[cols[f]] : undefined);
+    const debit = parseAmount(get('debit'));
+    const credit = parseAmount(get('credit'));
+
+    // Exactly one of debit/credit carries the amount.
+    let type: 'income' | 'expense';
+    let amount: number | null;
+    if (debit != null && debit > 0) {
+      type = 'expense';
+      amount = debit;
+    } else if (credit != null && credit > 0) {
+      type = 'income';
+      amount = credit;
+    } else {
+      // No money on this row — likely a spacer; skip quietly.
+      continue;
+    }
+
+    const occurredAt = parseDate(get('date'));
+    if (!occurredAt) {
+      errors.push({ row: rowNo, reason: `invalid date "${get('date') ?? ''}"` });
+      continue;
+    }
+
+    const details = String(get('details') ?? '').trim();
+    const remitter = String(get('remitter') ?? '').trim();
+    const note = [details, remitter].filter(Boolean).join(' — ') || undefined;
+
+    rows.push({ type, amount, category: 'other', occurredAt, note });
+  }
+
+  return { rows, errors };
+}
+
 function normalizeHeader(h: string): string {
   return String(h).trim().toLowerCase();
 }
@@ -127,6 +236,12 @@ function parseGrid(grid: unknown[][]): ParseResult {
   const rows: ParsedRow[] = [];
   const errors: { row: number; reason: string }[] = [];
   if (grid.length === 0) return { rows, errors };
+
+  // First, try a bank-statement layout (separate debit/credit columns).
+  const stmt = detectStatement(grid);
+  if (stmt) {
+    return parseStatement(grid, stmt.headerIdx, stmt.cols);
+  }
 
   // Detect a header row: does the first row contain any known header word?
   const firstRow = (grid[0] as unknown[]).map((c) => normalizeHeader(String(c)));

@@ -75,11 +75,11 @@ export function CsvImport({ onDone }: { onDone: () => void }) {
     <div className="card">
       <h3 className="section-title">📥 Import from Excel / CSV</h3>
       <p className="hint" style={{ marginTop: -10, marginBottom: 14 }}>
-        Upload a <code>.xlsx</code> / <code>.csv</code> (e.g. a bank statement)
-        or paste rows. Columns:{' '}
+        Upload a <code>.xlsx</code> / <code>.csv</code> or paste rows.{' '}
+        <strong>Techcombank bank statements are auto-detected</strong> (debit →
+        expense, credit → income). Otherwise use columns{' '}
         <code>type, amount, category, occurredAt, note</code> — order &amp;
-        header names are flexible; missing category becomes{' '}
-        <code>other</code>.
+        header names are flexible; missing category becomes <code>other</code>.
       </p>
 
       <div className="field">
